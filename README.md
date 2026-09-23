@@ -2,7 +2,7 @@
 
 A hobby project to implement and visualize numerical methods for ordinary differential equations (ODEs) and differential-algebraic equations (DAEs).
 
-My main reference is *Computer Methods for Ordinary Differential Equations and Differential-Algebraic Equations* by Uri M. Ascher and Linda R. Petzold. I’m using it to guide my learning while writing my own code, explanations, and examples.
+My main reference is *Computer Methods for Ordinary Differential Equations and Differential-Algebraic Equations* by Uri M. Ascher and Linda R. Petzold. I’m using it to guide my learning while writing my own code, explanations and solve each chapter's exercises in different programming languages.
 
 ---
 
