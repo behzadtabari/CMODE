@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.18)
+project(odelab LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+add_library(ode_cpu STATIC cpp/src/first_order_solver.cpp)
+target_include_directories(ode_cpu PUBLIC cpp/include)
+
+option(ODELAB_BUILD_PYTHON "Build Python extension" ON)
+option(ODELAB_ENABLE_CUDA "Build optional CUDA backend" OFF)
+
+if(ODELAB_ENABLE_CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  add_library(ode_cuda STATIC cpp/src/first_order_solver_cuda.cu)
+  target_include_directories(ode_cuda PUBLIC cpp/include)
+  target_link_libraries(ode_cuda PUBLIC CUDA::cudart)
+  set_target_properties(ode_cuda PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON
+                        CUDA_SEPARABLE_COMPILATION ON)
+endif()
+
+if(ODELAB_BUILD_PYTHON)
+  set(PYBIND11_FINDPYTHON ON)
+  find_package(pybind11 CONFIG REQUIRED)
+  pybind11_add_module(_core cpp/python/binding.cpp)
+  target_link_libraries(_core PRIVATE ode_cpu)
+  if(ODELAB_ENABLE_CUDA)
+    target_link_libraries(_core PRIVATE ode_cuda)
+    target_compile_definitions(_core PRIVATE ODELAB_HAS_CUDA=1)
+  endif()
+  install(TARGETS _core LIBRARY DESTINATION odelab)
+endif()
+
+include(CTest)
+if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cpp/tests/test_solver.cpp")
+  add_executable(test_cpu cpp/tests/test_solver.cpp)
+  target_link_libraries(test_cpu PRIVATE ode_cpu)
+  add_test(NAME cpu_solver COMMAND test_cpu)
+endif()
