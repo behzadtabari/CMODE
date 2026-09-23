@@ -61,32 +61,6 @@ python3 -m unittest discover -s tests/python -v
 CUDA is optional and disabled by default. Building it requires a CUDA toolkit
 and compatible NVIDIA hardware; the CPU extension does not require CUDA.
 
-## First example: near a Hopf bifurcation
-
-```sh
-source .venv/bin/activate
-python -m pip install '.[test,examples]'
-python examples/hopf_bifurcation.py
-# Save a figure without opening a window:
-python examples/hopf_bifurcation.py --no-show --save build/hopf.png
-```
-
-The example compares the C++ `solve_system_euler` integrator with an explicit
-forward Euler loop using NumPy, using the same Python RHS callback in both.
-NumPy provides array operations rather than a built-in ODE solver. Both use
-`y0 = [0, 2]`, `h = 0.01`, 2000 steps, `alpha = 10`, and `beta = 3.6`.
-Agreement checks the implementations against each other, not against an exact
-solution; both have forward Euler's discretization error. No speedup is assumed
-because the C++ loop still calls Python at every step.
-
-For positive parameters, write `x = alpha / 5`. The equilibrium is
-`(x, 1 + x²)`. Its Jacobian has trace `(3x² - 5 - beta*x)/(1 + x²)`
-and determinant `5*beta*x/(1 + x²)`. Thus at `alpha = 10` the Hopf threshold
-is `beta = 3.5`, and the supplied `beta = 3.6` lies on the locally stable side.
-This example shows a trajectory near that threshold, rather than a parameter
-sweep establishing the bifurcation. Euler's finite step size also affects the
-observed stability near the threshold.
-
 ---
 
 ## Motivation
