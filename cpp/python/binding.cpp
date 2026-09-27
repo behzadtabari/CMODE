@@ -92,10 +92,24 @@ PYBIND11_MODULE(_core, m) {
     return to_matrix(data, a.size(), steps + 1);
   }, py::arg("a"), py::arg("b"), py::arg("y0"), py::arg("t0"),
      py::arg("t1"), py::arg("steps"), py::arg("method"));
+  m.def("solve_hopf_batch_cuda",
+        [](const std::vector<double>& initial, double alpha, double beta,
+           double t0, double t1, std::size_t steps) {
+    std::vector<double> data;
+    { py::gil_scoped_release release;
+      data = odelab::solve_hopf_batch_cuda(
+          initial, alpha, beta, t0, t1, steps); }
+    return to_matrix(data, initial.size() / 2, (steps + 1) * 2);
+  }, py::arg("initial"), py::arg("alpha"), py::arg("beta"),
+     py::arg("t0"), py::arg("t1"), py::arg("steps"));
+
 #else
   m.def("cuda_available", [] { return false; });
   m.def("solve_linear_batch_cuda", [](py::args, py::kwargs) {
     throw std::runtime_error("CUDA backend was not built; set ODELAB_ENABLE_CUDA=ON");
+  });
+  m.def("solve_hopf_batch_cuda", [](py::args, py::kwargs) {
+    throw std::runtime_error("CUDA backend was not built; install with ODELAB_ENABLE_CUDA=ON");
   });
 #endif
 }

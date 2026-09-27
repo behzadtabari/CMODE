@@ -48,6 +48,10 @@ std::vector<double> solve_linear_batch_cuda(
     const std::vector<double>& y0, double t0, double t1, std::size_t steps,
     Method method);
 bool cuda_available();
+std::vector<double> solve_hopf_batch_cuda(
+    const std::vector<double>& initial, double alpha, double beta,
+    double t0, double t1, std::size_t steps);
+
 #endif
 
 }  // namespace odelab

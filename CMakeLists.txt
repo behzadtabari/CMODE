@@ -18,7 +18,8 @@ if(ODELAB_ENABLE_CUDA)
   target_include_directories(ode_cuda PUBLIC cpp/include)
   target_link_libraries(ode_cuda PUBLIC CUDA::cudart)
   set_target_properties(ode_cuda PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON
-                        CUDA_SEPARABLE_COMPILATION ON)
+                        CUDA_SEPARABLE_COMPILATION ON
+                        CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 endif()
 
 if(ODELAB_BUILD_PYTHON)

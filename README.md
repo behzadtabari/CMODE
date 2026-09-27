@@ -14,6 +14,44 @@ My main reference is *Computer Methods for Ordinary Differential Equations and D
 
 This repository is still under development.
 
+## Run in Colab
+
+Open [notebooks/colab_quickstart.ipynb](notebooks/colab_quickstart.ipynb), select
+a GPU runtime, and run the cells in order. First publish the updated
+`colab_version` branch to GitHub so Colab can clone these files.
+The original local `Colab_version.ipynb` is preserved as a reference; its CUDA
+kernel and build fixes now live in the package instead of notebook patches.
+
+The essential commands, from the repository root in Colab, are:
+
+```sh
+python -m pip install '.[test,examples]' \
+  -Ccmake.define.ODELAB_ENABLE_CUDA=ON \
+  -Ccmake.define.CMAKE_CUDA_ARCHITECTURES=native
+python examples/hopfbi_gpu_cpu_benchmarking.py --require-cuda
+```
+
+The build uses CMake 3.24 or newer to detect the runtime GPU architecture,
+so no T4-specific architecture number is needed. CUDA device symbols are
+resolved in the static CUDA library before linking the Python extension.
+See CMake's [architecture](https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html)
+and [device linking](https://cmake.org/cmake/help/latest/prop_tgt/CUDA_RESOLVE_DEVICE_SYMBOLS.html) documentation.
+CUDA remains optional for local CPU builds. The Hopf CUDA API accepts an
+initial array of shape `(batch, 2)` and returns `(batch, steps + 1, 2)`.
+
+For a quick CPU-only check, install `.[test,examples]` without the CUDA settings
+and run:
+
+```sh
+python examples/hopfbi_gpu_cpu_benchmarking.py --counts 1 4 --steps 100 --repeats 1
+```
+
+The benchmark checks numerical agreement. GPU timing includes allocations,
+transfers, and completed execution after warm-up. The C++ CPU solver calls a
+Python RHS, while CUDA evaluates the RHS entirely on the GPU; timings compare
+these complete implementations. The notebook uses fresh Python subprocesses
+so rerunning a build does not reuse an already-loaded extension.
+
 ## Use the C++ solvers from Python
 
 The CPU extension exposes forward Euler, backward Euler, and trapezoidal

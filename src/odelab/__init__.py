@@ -44,3 +44,20 @@ def solve_linear_batch_cuda(a, b, y0, t0, t1, steps, method):
 
 __all__ = ["Method", "Result", "cuda_available", "solve", "solve_linear",
            "solve_linear_batch", "solve_linear_batch_cuda", "solve_system_euler"]
+
+
+def solve_hopf_batch_cuda(initial, alpha, beta, t0, t1, steps):
+    '''Solve a batch of Hopf-system IVPs on CUDA.
+
+    initial has shape (batch, 2); result has shape (batch, steps + 1, 2).
+    '''
+    initial = np.asarray(initial, dtype=float)
+    if initial.ndim != 2 or initial.shape[1] != 2:
+        raise ValueError("initial must have shape (batch, 2)")
+    result = _core.solve_hopf_batch_cuda(
+        initial.ravel().tolist(), alpha, beta, t0, t1, steps
+    )
+    return np.asarray(result).reshape(len(initial), steps + 1, 2)
+
+
+__all__.append("solve_hopf_batch_cuda")
