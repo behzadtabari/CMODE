@@ -52,6 +52,21 @@ Python RHS, while CUDA evaluates the RHS entirely on the GPU; timings compare
 these complete implementations. The notebook uses fresh Python subprocesses
 so rerunning a build does not reuse an already-loaded extension.
 
+The quickstart streams build logs and runtime tracebacks directly into the
+notebook. Its benchmark cell displays a table and saves CSV/JSON results for
+each run; the next cell plots CPU/GPU timings and reference errors. Each backend
+has its own median/minimum time in milliseconds, speedup relative to C++, maximum
+absolute error and RMSE against a numerical reference, and difference from C++.
+The reference uses [SciPy DOP853](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html)
+with `rtol=1e-11`, `atol=1e-13`, evaluated at the Euler time samples. These are
+reference errors, not exact-solution errors. Reference generation and warm-up are
+outside the timed calls. To save the same table from a terminal:
+
+```sh
+python examples/hopfbi_gpu_cpu_benchmarking.py --require-cuda \
+  --json build/benchmark.json --csv build/benchmark.csv
+```
+
 ## Use the C++ solvers from Python
 
 The CPU extension exposes forward Euler, backward Euler, and trapezoidal
