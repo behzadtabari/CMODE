@@ -28,7 +28,7 @@ The essential commands, from the repository root in Colab, are:
 python -m pip install '.[test,examples]' \
   -Ccmake.define.ODELAB_ENABLE_CUDA=ON \
   -Ccmake.define.CMAKE_CUDA_ARCHITECTURES=native
-python examples/hopfbi_gpu_cpu_benchmarking.py --require-cuda
+python examples/chapter3_exercises/hopfbi_gpu_cpu_benchmarking.py --require-cuda
 ```
 
 The build uses CMake 3.24 or newer to detect the runtime GPU architecture,
@@ -43,7 +43,7 @@ For a quick CPU-only check, install `.[test,examples]` without the CUDA settings
 and run:
 
 ```sh
-python examples/hopfbi_gpu_cpu_benchmarking.py --counts 1 4 --steps 100 --repeats 1
+python examples/chapter3_exercises/hopfbi_gpu_cpu_benchmarking.py --counts 1 4 --steps 100 --repeats 1
 ```
 
 The benchmark checks numerical agreement. GPU timing includes allocations,
@@ -63,7 +63,7 @@ reference errors, not exact-solution errors. Reference generation and warm-up ar
 outside the timed calls. To save the same table from a terminal:
 
 ```sh
-python examples/hopfbi_gpu_cpu_benchmarking.py --require-cuda \
+python examples/chapter3_exercises/hopfbi_gpu_cpu_benchmarking.py --require-cuda \
   --json build/benchmark.json --csv build/benchmark.csv
 ```
 
@@ -119,9 +119,9 @@ and compatible NVIDIA hardware; the CPU extension does not require CUDA.
 ```sh
 source .venv/bin/activate
 python -m pip install '.[test,examples]'
-python examples/hopf_bifurcation.py
+python examples/chapter3_exercises/hopf_bifurcation.py
 # Save a figure without opening a window:
-python examples/hopf_bifurcation.py --no-show --save build/hopf.png
+python examples/chapter3_exercises/hopf_bifurcation.py --no-show --save build/hopf.png
 ```
 
 The example compares the C++ `solve_system_euler` integrator with an explicit
@@ -141,6 +141,65 @@ sweep establishing the bifurcation. Euler's finite step size also affects the
 observed stability near the threshold.
 
 ---
+
+## Random-grid method of lines: heat equation
+
+Run the **Random-grid method of lines** cells in `notebooks/colab_quickstart.ipynb`
+after repository/package setup, or run locally:
+
+```sh
+python examples/chapter3_exercises/method_of_line_1D_cpu_gpu.py --cpu-only
+```
+
+The example assumes `u_t = u_xx` on the unit rod (`alpha=1`), zero Dirichlet
+conditions, and `u(x,0)=sin(pi*x)`. The exact solution
+`exp(-pi²*t)*sin(pi*x)` supplies the accuracy reference. Crank–Nicolson advances
+the conservative three-point spatial discretization in its mass-matrix form:
+`(M - dt*K/2) u_next = (M + dt*K/2) u`, with control-volume lengths on `M`'s
+diagonal. No uniform-grid formula is applied to random spacings.
+
+Every run draws independent uniform interior coordinates, sorts them, and adds
+the endpoints 0 and 1. There is no spacing regularization. CPU and GPU use the
+same grid and double precision. The saved seed and actual grid allow replay
+with `--seed NUMBER`; the default is fresh randomness. Different grid sizes
+use independent meshes, so the plot is not a controlled convergence study.
+Very small gaps can make the system poorly conditioned, and Crank–Nicolson
+does not strongly damp the stiffest modes.
+
+The spatial method of lines produces a coupled **ODE system** `M*u'=K*u`;
+Crank–Nicolson is the trapezoidal rule applied to that system. The benchmark
+compares four implementations, using identical matrices and double precision:
+
+- NumPy/Python: Thomas factorization and substitution using arrays and Python loops.
+- SciPy CPU: sparse LU factorization reused by the Python time loop.
+- Your C++ CPU: native Thomas factorization and native time stepping.
+- Your C++ CUDA: native parallel cyclic reduction, with coefficients precomputed
+  once on the GPU and reused at every step. No CuPy is used.
+
+`odelab.solve_tridiagonal_cn` accepts the three diagonals of each constant
+matrix `L` and `R` for `L*y_next=R*y`, the initial vector, and step count.
+For this ODE, `L=M-dt*K/2` and `R=M+dt*K/2`. This interface also supports other
+constant tridiagonal linear ODE systems. The left matrix must have positive
+diagonal and be diagonally dominant; the native algorithms do not pivot.
+The result is `(final_state, timing_dict)`, with `backend="cpu"` or `"cuda"`.
+
+Both native backends factor/precompute once per solve. Setup and time stepping
+are measured separately. GPU solve timing waits for device completion; total
+time includes transfers and Python conversions. Warm-up, common matrix assembly,
+error calculation, and plotting are excluded. Speedups use the native C++ CPU
+solver as baseline. GPU speedups are not assumed for these small single systems.
+The normal CUDA package build in Colab supplies everything required.
+
+```sh
+python examples/chapter3_exercises/method_of_line_1D_cpu_gpu.py \
+  --require-cuda --nodes 64 256 1024 --steps 200 --final-time 0.1 --repeats 3
+```
+
+Results in `build/method_of_line_1D/` include `results.csv`, `results.json`,
+`grids_and_solutions.npz`, and `comparison.png`. The table reports final-time
+maximum absolute and volume-weighted L2 errors against the exact solution,
+CPU/GPU differences, timings, and solve/total speedups. Colab uses a separate
+output directory for each run. CUDA is optional locally.
 
 ## Motivation
 

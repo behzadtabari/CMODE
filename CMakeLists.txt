@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(ode_cpu STATIC cpp/src/first_order_solver.cpp)
+add_library(ode_cpu STATIC cpp/src/first_order_solver.cpp cpp/src/linear_system.cpp)
 target_include_directories(ode_cpu PUBLIC cpp/include)
 
 option(ODELAB_BUILD_PYTHON "Build Python extension" ON)
@@ -14,7 +14,7 @@ option(ODELAB_ENABLE_CUDA "Build optional CUDA backend" OFF)
 if(ODELAB_ENABLE_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
-  add_library(ode_cuda STATIC cpp/src/first_order_solver_cuda.cu)
+  add_library(ode_cuda STATIC cpp/src/first_order_solver_cuda.cu cpp/src/linear_system_cuda.cu)
   target_include_directories(ode_cuda PUBLIC cpp/include)
   target_link_libraries(ode_cuda PUBLIC CUDA::cudart)
   set_target_properties(ode_cuda PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON

@@ -1,4 +1,5 @@
 #include "../include/odelab/ivp/first_order_solver.hpp"
+#include "odelab/ivp/linear_system.hpp"
 
 #include <cstring>
 #include <stdexcept>
@@ -33,6 +34,30 @@ py::array_t<double> to_matrix(const std::vector<double>& data,
 }  // namespace
 
 PYBIND11_MODULE(_core, m) {
+  auto bind_linear_system = [&m](const char* name, auto solver) {
+    m.def(name, [solver](const std::vector<double>& ll, const std::vector<double>& ld,
+                        const std::vector<double>& lu, const std::vector<double>& rl,
+                        const std::vector<double>& rd, const std::vector<double>& ru,
+                        const std::vector<double>& initial, std::size_t steps) {
+      odelab::LinearSystemResult result;
+      { py::gil_scoped_release release;
+        result = solver(ll, ld, lu, rl, rd, ru, initial, steps); }
+      py::dict timing;
+      timing["setup_ms"] = result.setup_ms;
+      timing["solve_ms"] = result.solve_ms;
+      return py::make_tuple(to_array(result.y), timing);
+    }, py::arg("left_lower"), py::arg("left_diagonal"), py::arg("left_upper"),
+       py::arg("right_lower"), py::arg("right_diagonal"), py::arg("right_upper"),
+       py::arg("initial"), py::arg("steps"));
+  };
+  bind_linear_system("solve_tridiagonal_cn", &odelab::solve_tridiagonal_cn);
+#ifdef ODELAB_HAS_CUDA
+  bind_linear_system("solve_tridiagonal_cn_cuda", &odelab::solve_tridiagonal_cn_cuda);
+#else
+  m.def("solve_tridiagonal_cn_cuda", [](py::args, py::kwargs) {
+    throw std::runtime_error("CUDA backend was not built; set ODELAB_ENABLE_CUDA=ON");
+  });
+#endif
   m.doc() = "Compiled scalar ODE solvers";
   m.def("solve_system_euler", [](const odelab::SystemRhs& f, const std::vector<double>& y0,
                                  double t0, double t1, std::size_t steps) {

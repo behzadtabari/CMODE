@@ -16,7 +16,7 @@ def test_benchmark_reports_times_and_reference_errors(tmp_path):
     report = tmp_path / "results.json"
     csv_path = tmp_path / "results.csv"
     result = subprocess.run([
-        sys.executable, str(ROOT / "examples/hopfbi_gpu_cpu_benchmarking.py"),
+        sys.executable, str(ROOT / "examples/chapter3_exercises/hopfbi_gpu_cpu_benchmarking.py"),
         "--counts", "1", "2", "--steps", "20", "--repeats", "2",
         "--json", str(report), "--csv", str(csv_path),
     ], text=True, capture_output=True, check=True)
@@ -39,7 +39,7 @@ def test_benchmark_reports_times_and_reference_errors(tmp_path):
 def test_reference_shape_and_euler_error_convergence():
     pytest.importorskip("scipy")
     spec = importlib.util.spec_from_file_location(
-        "hopf_benchmark", ROOT / "examples/hopfbi_gpu_cpu_benchmarking.py")
+        "hopf_benchmark", ROOT / "examples/chapter3_exercises/hopfbi_gpu_cpu_benchmarking.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     initial = np.array([[0, 2], [2, 5]], dtype=float)
