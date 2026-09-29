@@ -44,3 +44,44 @@ def solve_linear_batch_cuda(a, b, y0, t0, t1, steps, method):
 
 __all__ = ["Method", "Result", "cuda_available", "solve", "solve_linear",
            "solve_linear_batch", "solve_linear_batch_cuda", "solve_system_euler"]
+
+
+def solve_hopf_batch_cuda(initial, alpha, beta, t0, t1, steps):
+    '''Solve a batch of Hopf-system IVPs on CUDA.
+
+    initial has shape (batch, 2); result has shape (batch, steps + 1, 2).
+    '''
+    initial = np.asarray(initial, dtype=float)
+    if initial.ndim != 2 or initial.shape[1] != 2:
+        raise ValueError("initial must have shape (batch, 2)")
+    result = _core.solve_hopf_batch_cuda(
+        initial.ravel().tolist(), alpha, beta, t0, t1, steps
+    )
+    return np.asarray(result).reshape(len(initial), steps + 1, 2)
+
+
+__all__.append("solve_hopf_batch_cuda")
+
+
+def solve_tridiagonal_cn(left_lower, left_diagonal, left_upper,
+                         right_lower, right_diagonal, right_upper,
+                         initial, steps, *, backend="cpu"):
+    """Advance L*y_next=R*y using constant tridiagonal matrices.
+
+    For M*y'=K*y, construct L=M-dt*K/2 and R=M+dt*K/2. Off-diagonals
+    have n-1 entries. L needs a positive, diagonally dominant diagonal.
+    Returns (final_state, timings_ms). Setup/solve are native wall times;
+    total includes Python conversion, transfers, and native cleanup.
+    """
+    from time import perf_counter
+    if backend not in ("cpu", "cuda"):
+        raise ValueError("backend must be 'cpu' or 'cuda'")
+    solver = _core.solve_tridiagonal_cn if backend == "cpu" else _core.solve_tridiagonal_cn_cuda
+    start = perf_counter()
+    y, timing = solver(left_lower, left_diagonal, left_upper,
+                       right_lower, right_diagonal, right_upper, initial, steps)
+    timing["total_ms"] = 1000 * (perf_counter() - start)
+    return y, timing
+
+
+__all__.append("solve_tridiagonal_cn")

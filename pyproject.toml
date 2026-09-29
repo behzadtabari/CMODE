@@ -12,10 +12,11 @@ dependencies = ["numpy>=1.23"]
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
-examples = ["matplotlib>=3.8"]
+examples = ["matplotlib>=3.8", "scipy>=1.10"]
 
 [tool.scikit-build]
 wheel.packages = ["src/odelab"]
+cmake.version = ">=3.24"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

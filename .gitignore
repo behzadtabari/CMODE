@@ -4,3 +4,5 @@ __pycache__/
 *.so
 *.pyd
 *.egg-info/
+Colab_version.ipynb
+.DS_Store

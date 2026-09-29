@@ -89,4 +89,76 @@ std::vector<double> solve_linear_batch_cuda(
   return out;
 }
 
+
+namespace {
+
+__global__ void hopf_kernel(const double* initial, double* out,
+                            std::size_t count, std::size_t steps,
+                            double h, double alpha, double beta) {
+  const std::size_t j = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (j >= count) return;
+
+  double y1 = initial[2 * j];
+  double y2 = initial[2 * j + 1];
+  const std::size_t offset = j * (steps + 1) * 2;
+  out[offset] = y1;
+  out[offset + 1] = y2;
+
+  for (std::size_t n = 0; n < steps; ++n) {
+    const double denominator = 1.0 + y1 * y1;
+    const double f1 = alpha - y1 - 4.0 * y1 * y2 / denominator;
+    const double f2 = beta * y1 * (1.0 - y2 / denominator);
+
+    // Beide Ableitungen nutzen den alten Zustand (Forward Euler)
+    y1 += h * f1;
+    y2 += h * f2;
+    out[offset + 2 * (n + 1)] = y1;
+    out[offset + 2 * (n + 1) + 1] = y2;
+  }
+}
+
+}  // namespace
+
+std::vector<double> solve_hopf_batch_cuda(
+    const std::vector<double>& initial, double alpha, double beta,
+    double t0, double t1, std::size_t steps) {
+  if (initial.size() % 2 != 0 ||
+      !std::isfinite(alpha) || !std::isfinite(beta) ||
+      !std::isfinite(t0) || !std::isfinite(t1) ||
+      !(t1 > t0) || steps == 0 ||
+      steps == std::numeric_limits<std::size_t>::max())
+    throw std::invalid_argument("invalid Hopf solver inputs");
+
+  const std::size_t count = initial.size() / 2;
+  if (count > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+      (steps + 1) > std::numeric_limits<std::size_t>::max() / (2 * sizeof(double)) ||
+      count > std::numeric_limits<std::size_t>::max() / sizeof(double) / ((steps + 1) * 2))
+    throw std::invalid_argument("Hopf batch or output is too large");
+
+  const double h = (t1 - t0) / static_cast<double>(steps);
+  if (!std::isfinite(h) || h <= 0.0)
+    throw std::invalid_argument("invalid step size");
+  for (double value : initial)
+    if (!std::isfinite(value))
+      throw std::invalid_argument("initial values must be finite");
+
+  std::vector<double> out(count * (steps + 1) * 2);
+  if (count == 0) return out;
+
+  DeviceMemory d_initial(initial.size()), d_out(out.size());
+  check(cudaMemcpy(d_initial.ptr, initial.data(),
+                   initial.size() * sizeof(double), cudaMemcpyHostToDevice));
+
+  hopf_kernel<<<static_cast<unsigned>((count + 255) / 256), 256>>>(
+      d_initial.ptr, d_out.ptr, count, steps, h, alpha, beta);
+  check(cudaGetLastError());
+
+  check(cudaMemcpy(out.data(), d_out.ptr, out.size() * sizeof(double),
+                   cudaMemcpyDeviceToHost));
+  for (double value : out)
+    if (!std::isfinite(value))
+      throw std::runtime_error("non-finite Hopf GPU solution");
+  return out;
+}
+
 }  // namespace odelab

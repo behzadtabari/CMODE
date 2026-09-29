@@ -1,4 +1,5 @@
 #include "../include/odelab/ivp/first_order_solver.hpp"
+#include "odelab/ivp/linear_system.hpp"
 
 #include <cstring>
 #include <stdexcept>
@@ -33,6 +34,30 @@ py::array_t<double> to_matrix(const std::vector<double>& data,
 }  // namespace
 
 PYBIND11_MODULE(_core, m) {
+  auto bind_linear_system = [&m](const char* name, auto solver) {
+    m.def(name, [solver](const std::vector<double>& ll, const std::vector<double>& ld,
+                        const std::vector<double>& lu, const std::vector<double>& rl,
+                        const std::vector<double>& rd, const std::vector<double>& ru,
+                        const std::vector<double>& initial, std::size_t steps) {
+      odelab::LinearSystemResult result;
+      { py::gil_scoped_release release;
+        result = solver(ll, ld, lu, rl, rd, ru, initial, steps); }
+      py::dict timing;
+      timing["setup_ms"] = result.setup_ms;
+      timing["solve_ms"] = result.solve_ms;
+      return py::make_tuple(to_array(result.y), timing);
+    }, py::arg("left_lower"), py::arg("left_diagonal"), py::arg("left_upper"),
+       py::arg("right_lower"), py::arg("right_diagonal"), py::arg("right_upper"),
+       py::arg("initial"), py::arg("steps"));
+  };
+  bind_linear_system("solve_tridiagonal_cn", &odelab::solve_tridiagonal_cn);
+#ifdef ODELAB_HAS_CUDA
+  bind_linear_system("solve_tridiagonal_cn_cuda", &odelab::solve_tridiagonal_cn_cuda);
+#else
+  m.def("solve_tridiagonal_cn_cuda", [](py::args, py::kwargs) {
+    throw std::runtime_error("CUDA backend was not built; set ODELAB_ENABLE_CUDA=ON");
+  });
+#endif
   m.doc() = "Compiled scalar ODE solvers";
   m.def("solve_system_euler", [](const odelab::SystemRhs& f, const std::vector<double>& y0,
                                  double t0, double t1, std::size_t steps) {
@@ -92,10 +117,24 @@ PYBIND11_MODULE(_core, m) {
     return to_matrix(data, a.size(), steps + 1);
   }, py::arg("a"), py::arg("b"), py::arg("y0"), py::arg("t0"),
      py::arg("t1"), py::arg("steps"), py::arg("method"));
+  m.def("solve_hopf_batch_cuda",
+        [](const std::vector<double>& initial, double alpha, double beta,
+           double t0, double t1, std::size_t steps) {
+    std::vector<double> data;
+    { py::gil_scoped_release release;
+      data = odelab::solve_hopf_batch_cuda(
+          initial, alpha, beta, t0, t1, steps); }
+    return to_matrix(data, initial.size() / 2, (steps + 1) * 2);
+  }, py::arg("initial"), py::arg("alpha"), py::arg("beta"),
+     py::arg("t0"), py::arg("t1"), py::arg("steps"));
+
 #else
   m.def("cuda_available", [] { return false; });
   m.def("solve_linear_batch_cuda", [](py::args, py::kwargs) {
     throw std::runtime_error("CUDA backend was not built; set ODELAB_ENABLE_CUDA=ON");
+  });
+  m.def("solve_hopf_batch_cuda", [](py::args, py::kwargs) {
+    throw std::runtime_error("CUDA backend was not built; install with ODELAB_ENABLE_CUDA=ON");
   });
 #endif
 }
