@@ -1,4 +1,4 @@
-#include "linear_system_detail.hpp"
+#include "odelab/ivp/linear_system_detail.hpp"
 #include <cuda_runtime.h>
 #include <algorithm>
 #include <string>

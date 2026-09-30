@@ -1,4 +1,4 @@
-#include "../include/odelab/ivp/first_order_solver.hpp"
+#include "odelab/ivp/first_order_solver.hpp"
 #include "odelab/ivp/linear_system.hpp"
 
 #include <cstring>

@@ -1,4 +1,4 @@
-#include "linear_system_detail.hpp"
+#include "odelab/ivp/linear_system_detail.hpp"
 
 namespace odelab {
 LinearSystemResult solve_tridiagonal_cn(
