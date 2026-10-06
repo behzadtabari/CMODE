@@ -1,5 +1,6 @@
 #include "odelab/ivp/first_order_solver.hpp"
 #include "odelab/ivp/linear_system.hpp"
+#include "odelab/ivp/linear_multistep_methods.hpp"
 
 #include <cstring>
 #include <stdexcept>
@@ -34,6 +35,30 @@ py::array_t<double> to_matrix(const std::vector<double>& data,
 }  // namespace
 
 PYBIND11_MODULE(_core, m) {
+  py::enum_<odelab::MultiStepMethod>(m, "MultiStepMethod")
+      .value("BDF", odelab::MultiStepMethod::bdf)
+      .value("bdf", odelab::MultiStepMethod::bdf);
+  m.def("solve_linear_multi_step",
+        [](py::function f, double y0, double t0, double t1,
+           std::size_t steps, odelab::MultiStepMethod method,
+           std::size_t order, double newton_atol, double newton_rtol,
+           int max_iterations, py::object df_dy,
+           const std::vector<double>& startup_values) {
+    odelab::Rhs derivative;
+    if (!df_dy.is_none()) {
+      if (!PyCallable_Check(df_dy.ptr())) throw py::type_error("df_dy must be callable or None");
+      derivative = [df_dy](double t, double y) { return df_dy(t, y).cast<double>(); };
+    }
+    const auto result = odelab::solve_linear_multi_step(
+        [&f](double t, double y) { return f(t, y).cast<double>(); },
+        y0, t0, t1, steps, method, order, newton_atol, newton_rtol,
+        max_iterations, derivative, startup_values);
+    return to_python(result);
+  }, py::arg("f"), py::arg("y0"), py::arg("t0"), py::arg("t1"),
+     py::arg("steps"), py::arg("method") = odelab::MultiStepMethod::bdf,
+     py::arg("order") = 2, py::arg("newton_atol") = 1e-12,
+     py::arg("newton_rtol") = 1e-10, py::arg("max_iterations") = 30,
+     py::arg("df_dy") = py::none(), py::arg("startup_values") = std::vector<double>{});
   auto bind_linear_system = [&m](const char* name, auto solver) {
     m.def(name, [solver](const std::vector<double>& ll, const std::vector<double>& ld,
                         const std::vector<double>& lu, const std::vector<double>& rl,

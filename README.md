@@ -14,6 +14,17 @@ My main reference is *Computer Methods for Ordinary Differential Equations and D
 
 This repository is still under development.
 
+For a fixed-step implicit ODE example, compare the C++ BDF solver with SciPy:
+
+```sh
+python -m pip install '.[examples]'
+python examples/chapter3_exercises/bdf_nonlinear_benchmark.py
+```
+
+The example solves `y'=-5*t*y²+5/t-1/t²` on `[1,2]` with `y(1)=1`.
+The exact solution `y=1/t` provides an accuracy check. Results and a plot
+are saved under `build/bdf_nonlinear/`.
+
 
 ## Motivation
 

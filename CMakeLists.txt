@@ -5,7 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(ode_cpu STATIC cpp/src/ivp/first_order_solver.cpp cpp/src/ivp/linear_system.cpp)
+add_library(ode_cpu STATIC cpp/src/ivp/first_order_solver.cpp cpp/src/ivp/linear_system.cpp
+                           cpp/src/ivp/linear_multistep_methods.cpp)
 target_include_directories(ode_cpu PUBLIC cpp/include)
 
 option(ODELAB_BUILD_PYTHON "Build Python extension" ON)

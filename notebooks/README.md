@@ -53,6 +53,25 @@ python examples/chapter3_exercises/hopfbi_gpu_cpu_benchmarking.py --require-cuda
 
 ## Use the C++ solvers from Python
 
+### Fixed-step BDF methods
+
+`odelab.solve_linear_multi_step(f, y0, t0, t1, steps, order=2)` exposes the
+native scalar BDF1–6 implementation. It accepts an optional analytic
+`df_dy(t, y)` for Newton's method. BDF3–6 require `order-1` accurate
+`startup_values`; BDF2 starts with backward Euler by default.
+`newton_atol` and `newton_rtol` control the nonlinear solve, not the time
+discretization error. The code uses a fixed grid and has no adaptive error
+control.
+
+Run `python examples/chapter3_exercises/bdf_nonlinear_benchmark.py` to
+compare BDF2 with [SciPy's adaptive BDF](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html).
+Both start at `y(1)=1` and sample the same times on `[1,2]`; SciPy uses
+adaptive internal steps limited by the C++ step size. The solvers therefore
+have different step policies and error tolerances. The benchmark reports
+elapsed time and maximum/final error against the exact solution `1/t`,
+and writes CSV, JSON, and a plot to `build/bdf_nonlinear/`.
+
+
 The CPU extension exposes forward Euler, backward Euler, and trapezoidal
 methods through pybind11. With Python, a C++17 compiler, and CMake installed,
 install the package into a virtual environment:

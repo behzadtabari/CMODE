@@ -4,7 +4,7 @@ import numpy as np
 from collections import namedtuple
 
 from . import _core
-from ._core import Method, cuda_available
+from ._core import Method, MultiStepMethod, cuda_available
 
 Result = namedtuple("Result", ["t", "y"])
 
@@ -85,3 +85,19 @@ def solve_tridiagonal_cn(left_lower, left_diagonal, left_upper,
 
 
 __all__.append("solve_tridiagonal_cn")
+
+
+def solve_linear_multi_step(f, y0, t0, t1, steps, method=MultiStepMethod.BDF,
+                            order=2, newton_atol=1e-12, newton_rtol=1e-10,
+                            max_iterations=30, df_dy=None, startup_values=()):
+    """Fixed-step scalar BDF1–6; return (t, y) arrays with named fields.
+
+    BDF3–6 need order-1 accurate startup values. Newton tolerances control
+    the nonlinear solve, not integration error.
+    """
+    return Result(*_core.solve_linear_multi_step(
+        f, y0, t0, t1, steps, method, order, newton_atol, newton_rtol,
+        max_iterations, df_dy, startup_values))
+
+
+__all__.extend(["MultiStepMethod", "solve_linear_multi_step"])
